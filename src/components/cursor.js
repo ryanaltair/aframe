@@ -24,6 +24,11 @@ var CANVAS_EVENTS = {
   UP: ['mouseup', 'touchend']
 };
 
+var WEBXR_EVENTS = {
+  DOWN: ['selectstart'],
+  UP: ['selectend']
+};
+
 var CANVAS_HOVER_CLASS = 'a-mouse-cursor-hover';
 
 /**
@@ -57,6 +62,7 @@ module.exports.Component = registerComponent('cursor', {
     this.cursorDownEl = null;
     this.intersectedEl = null;
     this.canvasBounds = document.body.getBoundingClientRect();
+    this.isCursorDown = false;
 
     // Debounce.
     this.updateCanvasBounds = utils.debounce(function updateCanvasBounds () {
@@ -72,6 +78,7 @@ module.exports.Component = registerComponent('cursor', {
     this.onIntersection = bind(this.onIntersection, this);
     this.onIntersectionCleared = bind(this.onIntersectionCleared, this);
     this.onMouseMove = bind(this.onMouseMove, this);
+    this.onEnterVR = bind(this.onEnterVR, this);
   },
 
   update: function (oldData) {
@@ -130,6 +137,7 @@ module.exports.Component = registerComponent('cursor', {
     el.addEventListener('raycaster-intersection-cleared', this.onIntersectionCleared);
 
     el.sceneEl.addEventListener('rendererresize', this.updateCanvasBounds);
+    el.sceneEl.addEventListener('enter-vr', this.onEnterVR);
     window.addEventListener('resize', this.updateCanvasBounds);
     window.addEventListener('scroll', this.updateCanvasBounds);
 
@@ -165,6 +173,7 @@ module.exports.Component = registerComponent('cursor', {
     canvas.removeEventListener('touchmove', this.onMouseMove);
 
     el.sceneEl.removeEventListener('rendererresize', this.updateCanvasBounds);
+    el.sceneEl.removeEventListener('enter-vr', this.onEnterVR);
     window.removeEventListener('resize', this.updateCanvasBounds);
     window.removeEventListener('scroll', this.updateCanvasBounds);
   },
@@ -223,6 +232,7 @@ module.exports.Component = registerComponent('cursor', {
    * Trigger mousedown and keep track of the mousedowned entity.
    */
   onCursorDown: function (evt) {
+    this.isCursorDown = true;
     // Raycast again for touch.
     if (this.data.rayOrigin === 'mouse' && evt.type === 'touchstart') {
       this.onMouseMove(evt);
@@ -242,6 +252,10 @@ module.exports.Component = registerComponent('cursor', {
    *   in case user mousedowned one entity, dragged to another, and mouseupped.
    */
   onCursorUp: function (evt) {
+    if (!this.isCursorDown) { return; }
+
+    this.isCursorDown = false;
+
     var data = this.data;
     this.twoWayEmit(EVENTS.MOUSEUP);
 
@@ -302,6 +316,19 @@ module.exports.Component = registerComponent('cursor', {
     // Check if the current intersection has ended
     if (clearedEls.indexOf(this.intersectedEl) === -1) { return; }
     this.clearCurrentIntersection();
+  },
+
+  onEnterVR: function () {
+    this.clearCurrentIntersection(true);
+    var xrSession = this.el.sceneEl.xrSession;
+    var self = this;
+    if (!xrSession) { return; }
+    WEBXR_EVENTS.DOWN.forEach(function (downEvent) {
+      xrSession.addEventListener(downEvent, self.onCursorDown);
+    });
+    WEBXR_EVENTS.UP.forEach(function (upEvent) {
+      xrSession.addEventListener(upEvent, self.onCursorUp);
+    });
   },
 
   setIntersection: function (intersectedEl, intersection) {

@@ -1,4 +1,4 @@
-/* global Promise, screen */
+/* global Promise, screen, CustomEvent */
 var initMetaTags = require('./metaTags').inject;
 var initWakelock = require('./wakelock');
 var loadingScreen = require('./loadingScreen');
@@ -42,6 +42,7 @@ module.exports.AScene = registerElement('a-scene', {
         this.isIOS = isIOS;
         this.isMobile = isMobile;
         this.hasWebXR = isWebXRAvailable;
+        this.isAR = false;
         this.isScene = true;
         this.object3D = new THREE.Scene();
         var self = this;
@@ -49,6 +50,7 @@ module.exports.AScene = registerElement('a-scene', {
           // THREE may swap the camera used for the rendering if in VR, so we pass it to tock
           if (self.isPlaying) { self.tock(self.time, self.delta, camera); }
         };
+        this.resize = bind(this.resize, this);
         this.render = bind(this.render, this);
         this.systems = {};
         this.systemNames = [];
@@ -64,6 +66,7 @@ module.exports.AScene = registerElement('a-scene', {
         this.setAttribute('keyboard-shortcuts', '');
         this.setAttribute('screenshot', '');
         this.setAttribute('vr-mode-ui', '');
+        this.setAttribute('device-orientation-permission-ui', '');
       }
     },
 
@@ -82,17 +85,47 @@ module.exports.AScene = registerElement('a-scene', {
     attachedCallback: {
       value: function () {
         var self = this;
+        var embedded = this.hasAttribute('embedded');
         // Renderer initialization
         setupCanvas(this);
         this.setupRenderer();
 
         this.resize();
-        this.addFullScreenStyles();
+        if (!embedded) { this.addFullScreenStyles(); }
         initPostMessageAPI(this);
 
         initMetaTags(this);
         initWakelock(this);
 
+        // Handler to exit VR (e.g., Oculus Browser back button).
+        this.onVRPresentChangeBound = bind(this.onVRPresentChange, this);
+        window.addEventListener('vrdisplaypresentchange', this.onVRPresentChangeBound);
+
+        // Bind functions.
+        this.enterVRBound = function () { self.enterVR(); };
+        this.exitVRBound = function () { self.exitVR(); };
+        this.exitVRTrueBound = function () { self.exitVR(true); };
+        this.pointerRestrictedBound = function () { self.pointerRestricted(); };
+        this.pointerUnrestrictedBound = function () { self.pointerUnrestricted(); };
+
+        if (!isWebXRAvailable) {
+          // Exit VR on `vrdisplaydeactivate` (e.g. taking off Rift headset).
+          window.addEventListener('vrdisplaydeactivate', this.exitVRBound);
+
+          // Exit VR on `vrdisplaydisconnect` (e.g. unplugging Rift headset).
+          window.addEventListener('vrdisplaydisconnect', this.exitVRTrueBound);
+
+          // Register for mouse restricted events while in VR
+          // (e.g. mouse no longer available on desktop 2D view)
+          window.addEventListener('vrdisplaypointerrestricted', this.pointerRestrictedBound);
+
+          // Register for mouse unrestricted events while in VR
+          // (e.g. mouse once again available on desktop 2D view)
+          window.addEventListener('vrdisplaypointerunrestricted',
+                                  this.pointerUnrestrictedBound);
+        }
+
+        window.addEventListener('sessionend', this.resize);
         // Camera set up by camera system.
         this.addEventListener('cameraready', function () {
           self.attachedCallbackPostCamera();
@@ -107,7 +140,6 @@ module.exports.AScene = registerElement('a-scene', {
         var resize;
         var self = this;
 
-        resize = bind(this.resize, this);
         window.addEventListener('load', resize);
         window.addEventListener('resize', function () {
           // Workaround for a Webkit bug (https://bugs.webkit.org/show_bug.cgi?id=170595)
@@ -116,45 +148,15 @@ module.exports.AScene = registerElement('a-scene', {
           // is postponed a few milliseconds.
           // self.resize can be called directly once the bug above is fixed.
           if (self.isIOS) {
-            setTimeout(resize, 100);
+            setTimeout(self.resize, 100);
           } else {
-            resize();
+            self.resize();
           }
         });
         this.play();
 
         // Add to scene index.
         scenes.push(this);
-
-        // Handler to exit VR (e.g., Oculus Browser back button).
-        this.onVRPresentChangeBound = bind(this.onVRPresentChange, this);
-        window.addEventListener('vrdisplaypresentchange', this.onVRPresentChangeBound);
-
-        // bind functions
-        this.enterVRBound = function () { self.enterVR(); };
-        this.exitVRBound = function () { self.exitVR(); };
-        this.exitVRTrueBound = function () { self.exitVR(true); };
-        this.pointerRestrictedBound = function () { self.pointerRestricted(); };
-        this.pointerUnrestrictedBound = function () { self.pointerUnrestricted(); };
-
-        if (!isWebXRAvailable) {
-          // Enter VR on `vrdisplayactivate` (e.g. putting on Rift headset).
-          window.addEventListener('vrdisplayactivate', this.enterVRBound);
-
-          // Exit VR on `vrdisplaydeactivate` (e.g. taking off Rift headset).
-          window.addEventListener('vrdisplaydeactivate', this.exitVRBound);
-
-          // Exit VR on `vrdisplaydisconnect` (e.g. unplugging Rift headset).
-          window.addEventListener('vrdisplaydisconnect', this.exitVRTrueBound);
-
-          // Register for mouse restricted events while in VR
-          // (e.g. mouse no longer available on desktop 2D view)
-          window.addEventListener('vrdisplaypointerrestricted', this.pointerRestrictedBound);
-
-          // Register for mouse unrestricted events while in VR
-          // (e.g. mouse once again available on desktop 2D view)
-          window.addEventListener('vrdisplaypointerunrestricted', this.pointerUnrestrictedBound);
-        }
       },
       writable: window.debug
     },
@@ -203,6 +205,7 @@ module.exports.AScene = registerElement('a-scene', {
         window.removeEventListener('vrdisplaydisconnect', this.exitVRTrueBound);
         window.removeEventListener('vrdisplaypointerrestricted', this.pointerRestrictedBound);
         window.removeEventListener('vrdisplaypointerunrestricted', this.pointerUnrestrictedBound);
+        window.removeEventListener('sessionend', this.resize);
       }
     },
 
@@ -246,46 +249,63 @@ module.exports.AScene = registerElement('a-scene', {
       writable: window.debug
     },
 
+    enterAR: {
+      value: function () {
+        if (!this.hasWebXR) {
+          throw new Error('Failed to enter AR mode, WebXR not supported.');
+        }
+        this.enterVR(true);
+      }
+    },
+
     /**
      * Call `requestPresent` if WebVR or WebVR polyfill.
      * Call `requestFullscreen` on desktop.
      * Handle events, states, fullscreen styles.
      *
+     * @param {bool?} useAR - if true, try immersive-ar mode
      * @returns {Promise}
      */
     enterVR: {
-      value: function () {
+      value: function (useAR) {
         var self = this;
         var vrDisplay;
-        var vrManager = self.renderer.vr;
+        var vrManager = self.renderer.xr;
 
         // Don't enter VR if already in VR.
         if (this.is('vr-mode')) { return Promise.resolve('Already in VR.'); }
 
         // Has VR.
         if (this.checkHeadsetConnected() || this.isMobile) {
-          vrDisplay = utils.device.getVRDisplay();
           vrManager.enabled = true;
-          vrManager.setDevice(vrDisplay);
 
           if (this.hasWebXR) {
             // XR API.
             if (this.xrSession) {
               this.xrSession.removeEventListener('end', this.exitVRBound);
             }
-            vrDisplay.requestSession({
-              immersive: true,
-              exclusive: true
-            }).then(function requestSuccess (xrSession) {
-              self.xrSession = xrSession;
-              vrManager.setSession(xrSession);
-              xrSession.addEventListener('end', self.exitVRBound);
-              xrSession.requestFrameOfReference('stage').then(function (frameOfReference) {
-                self.frameOfReference = frameOfReference;
-              });
-              enterVRSuccess();
-            });
+            var refspace = this.sceneEl.systems.webxr.sessionReferenceSpaceType;
+            vrManager.setReferenceSpaceType(refspace);
+            var xrMode = useAR ? 'immersive-ar' : 'immersive-vr';
+            var xrInit = this.sceneEl.systems.webxr.sessionConfiguration;
+            navigator.xr.requestSession(xrMode, xrInit).then(
+                function requestSuccess (xrSession) {
+                  self.xrSession = xrSession;
+                  vrManager.setSession(xrSession);
+                  xrSession.addEventListener('end', self.exitVRBound);
+                  if (useAR) {
+                    self.addState('ar-mode');
+                  }
+                  enterVRSuccess();
+                });
           } else {
+            vrDisplay = utils.device.getVRDisplay();
+            vrManager.setDevice(vrDisplay);
+            if (vrDisplay.isPresenting &&
+                !window.hasNativeWebVRImplementation) {
+              enterVRSuccess();
+              return Promise.resolve();
+            }
             var rendererSystem = this.getAttribute('renderer');
             var presentationAttributes = {
               highRefreshRate: rendererSystem.highRefreshRate,
@@ -306,10 +326,21 @@ module.exports.AScene = registerElement('a-scene', {
 
         // Callback that happens on enter VR success or enter fullscreen (any API).
         function enterVRSuccess () {
+          // vrdisplaypresentchange fires only once when the first requestPresent is completed;
+          // the first requestPresent could be called from ondisplayactivate and there is no way
+          // to setup everything from there. Thus, we need to emulate another vrdisplaypresentchange
+          // for the actual requestPresent. Need to make sure there are no issues with firing the
+          // vrdisplaypresentchange multiple times.
+          var event;
+          if (window.hasNativeWebVRImplementation && !window.hasNativeWebXRImplementation) {
+            event = new CustomEvent('vrdisplaypresentchange', {detail: {display: utils.device.getVRDisplay()}});
+            window.dispatchEvent(event);
+          }
+
           self.addState('vr-mode');
           self.emit('enter-vr', {target: self});
           // Lock to landscape orientation on mobile.
-          if (self.isMobile && screen.orientation && screen.orientation.lock) {
+          if (!isWebXRAvailable && self.isMobile && screen.orientation && screen.orientation.lock) {
             screen.orientation.lock('landscape');
           }
           self.addFullScreenStyles();
@@ -346,7 +377,7 @@ module.exports.AScene = registerElement('a-scene', {
       value: function () {
         var self = this;
         var vrDisplay;
-        var vrManager = this.renderer.vr;
+        var vrManager = this.renderer.xr;
 
         // Don't exit VR if not in VR.
         if (!this.is('vr-mode')) { return Promise.resolve('Not in VR.'); }
@@ -357,7 +388,9 @@ module.exports.AScene = registerElement('a-scene', {
           vrDisplay = utils.device.getVRDisplay();
           if (this.hasWebXR) {
             this.xrSession.removeEventListener('end', this.exitVRBound);
-            this.xrSession.end();
+            // Capture promise to avoid errors.
+            this.xrSession.end().then(function () {}, function () {});
+            this.xrSession = undefined;
             vrManager.setSession(null);
           } else {
             if (vrDisplay.isPresenting) {
@@ -375,14 +408,17 @@ module.exports.AScene = registerElement('a-scene', {
 
         function exitVRSuccess () {
           self.removeState('vr-mode');
+          self.removeState('ar-mode');
           // Lock to landscape orientation on mobile.
           if (self.isMobile && screen.orientation && screen.orientation.unlock) {
             screen.orientation.unlock();
           }
           // Exiting VR in embedded mode, no longer need fullscreen styles.
           if (self.hasAttribute('embedded')) { self.removeFullScreenStyles(); }
+
           self.resize();
           if (self.isIOS) { utils.forceCanvasResizeSafariMobile(self.canvas); }
+          self.renderer.setPixelRatio(window.devicePixelRatio);
           self.emit('exit-vr', {target: self});
         }
 
@@ -431,7 +467,7 @@ module.exports.AScene = registerElement('a-scene', {
         // Polyfill places display inside the detail property
         var display = evt.display || evt.detail.display;
         // Entering VR.
-        if (display.isPresenting) {
+        if (display && display.isPresenting) {
           this.enterVR();
           return;
         }
@@ -520,10 +556,8 @@ module.exports.AScene = registerElement('a-scene', {
         var embedded;
         var isVRPresenting;
         var size;
-        var vrDevice;
-
-        vrDevice = this.renderer.vr.getDevice();
-        isVRPresenting = this.renderer.vr.enabled && vrDevice && vrDevice.isPresenting;
+        var isPresenting = this.renderer.xr.isPresenting;
+        isVRPresenting = this.renderer.xr.enabled && isPresenting;
 
         // Do not update renderer, if a camera or a canvas have not been injected.
         // In VR mode, three handles canvas resize based on the dimensions returned by
@@ -559,7 +593,8 @@ module.exports.AScene = registerElement('a-scene', {
           alpha: true,
           antialias: !isMobile,
           canvas: this.canvas,
-          logarithmicDepthBuffer: false
+          logarithmicDepthBuffer: false,
+          powerPreference: 'high-performance'
         };
 
         this.maxCanvasSize = {height: 1920, width: 1920};
@@ -597,9 +632,9 @@ module.exports.AScene = registerElement('a-scene', {
         renderer = this.renderer = new THREE.WebGLRenderer(rendererConfig);
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.sortObjects = false;
-        if (this.camera) { renderer.vr.setPoseTarget(this.camera.el.object3D); }
+        if (this.camera) { renderer.xr.setPoseTarget(this.camera.el.object3D); }
         this.addEventListener('camera-set-active', function () {
-          renderer.vr.setPoseTarget(self.camera.el.object3D);
+          renderer.xr.setPoseTarget(self.camera.el.object3D);
         });
         loadingScreen.setup(this, getCanvasSize);
       },
@@ -623,8 +658,13 @@ module.exports.AScene = registerElement('a-scene', {
         this.addEventListener('loaded', function () {
           var renderer = this.renderer;
           var vrDisplay;
-          var vrManager = this.renderer.vr;
+          var vrManager = this.renderer.xr;
           AEntity.prototype.play.call(this);  // .play() *before* render.
+
+          // WebXR Immersive navigation handler.
+          if (this.hasWebXR && navigator.xr && navigator.xr.addEventListener) {
+            navigator.xr.addEventListener('sessiongranted', function () { sceneEl.enterVR(); });
+          }
 
           if (sceneEl.renderStarted) { return; }
           sceneEl.resize();
@@ -727,8 +767,17 @@ module.exports.AScene = registerElement('a-scene', {
         this.time = this.clock.elapsedTime * 1000;
 
         if (this.isPlaying) { this.tick(this.time, this.delta); }
-
+        var savedBackground = null;
+        if (this.is('ar-mode')) {
+          // In AR mode, don't render the default background. Hide it, then
+          // restore it again after rendering.
+          savedBackground = this.object3D.background;
+          this.object3D.background = null;
+        }
         renderer.render(this.object3D, this.camera);
+        if (savedBackground) {
+          this.object3D.background = savedBackground;
+        }
       },
       writable: true
     }
@@ -805,6 +854,11 @@ function requestFullscreen (canvas) {
 }
 
 function exitFullscreen () {
+  var fullscreenEl =
+    document.fullscreenElement ||
+    document.webkitFullscreenElement ||
+    document.mozFullScreenElement;
+  if (!fullscreenEl) { return; }
   if (document.exitFullscreen) {
     document.exitFullscreen();
   } else if (document.mozCancelFullScreen) {
@@ -826,6 +880,7 @@ function setupCanvas (sceneEl) {
   document.addEventListener('fullscreenchange', onFullScreenChange);
   document.addEventListener('mozfullscreenchange', onFullScreenChange);
   document.addEventListener('webkitfullscreenchange', onFullScreenChange);
+  document.addEventListener('MSFullscreenChange', onFullScreenChange);
 
   // Prevent overscroll on mobile.
   canvasEl.addEventListener('touchmove', function (event) { event.preventDefault(); });

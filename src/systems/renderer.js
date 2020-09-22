@@ -11,7 +11,7 @@ var warn = debug('components:renderer:warn');
 module.exports.System = registerSystem('renderer', {
   schema: {
     antialias: {default: 'auto', oneOf: ['true', 'false', 'auto']},
-    highRefreshRate: {default: false},
+    highRefreshRate: {default: utils.device.isOculusBrowser()},
     logarithmicDepthBuffer: {default: 'auto', oneOf: ['true', 'false', 'auto']},
     maxCanvasWidth: {default: 1920},
     maxCanvasHeight: {default: 1920},
@@ -29,13 +29,11 @@ module.exports.System = registerSystem('renderer', {
     var sceneEl = this.el;
     // This is the rendering engine, such as THREE.js so copy over any persistent properties from the rendering system.
     var renderer = sceneEl.renderer;
-
     renderer.sortObjects = data.sortObjects;
     renderer.physicallyCorrectLights = data.physicallyCorrectLights;
 
     if (data.colorManagement || data.gammaOutput) {
-      renderer.gammaOutput = true;
-      renderer.gammaFactor = 2.2;
+      renderer.outputEncoding = THREE.sRGBEncoding;
       if (data.gammaOutput) {
         warn('Property `gammaOutput` is deprecated. Use `renderer="colorManagement: true;"` instead.');
       }

@@ -3,14 +3,10 @@ dist: trusty
 language: node_js
 addons:
   firefox: 'latest'
-  apt:
-    sources:
-      - google-chrome
-    packages:
-      - google-chrome-stable
+  chrome: stable
 
 node_js:
-  - '4.6'
+  - '11.6'
 
 install:
   - npm install

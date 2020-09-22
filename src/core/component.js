@@ -48,14 +48,28 @@ var Component = module.exports.Component = function (el, attrValue, id) {
   this.el.components[this.attrName] = this;
   this.objectPool = objectPools[this.name];
 
-  eventsBind(this, this.events);
+  const events = this.events;
+  this.events = {};
+  eventsBind(this, events);
 
   // Store component data from previous update call.
   this.attrValue = undefined;
-  this.nextData = this.isObjectBased ? this.objectPool.use() : undefined;
-  this.oldData = this.isObjectBased ? this.objectPool.use() : undefined;
-  this.previousOldData = this.isObjectBased ? this.objectPool.use() : undefined;
-  this.parsingAttrValue = this.isObjectBased ? this.objectPool.use() : undefined;
+  if (this.isObjectBased) {
+    this.nextData = this.objectPool.use();
+    // Drop any properties added by dynamic schemas in previous use
+    utils.objectPool.removeUnusedKeys(this.nextData, this.schema);
+    this.oldData = this.objectPool.use();
+    utils.objectPool.removeUnusedKeys(this.oldData, this.schema);
+    this.previousOldData = this.objectPool.use();
+    utils.objectPool.removeUnusedKeys(this.previousOldData, this.schema);
+    this.parsingAttrValue = this.objectPool.use();
+    utils.objectPool.removeUnusedKeys(this.parsingAttrValue, this.schema);
+  } else {
+    this.nextData = undefined;
+    this.oldData = undefined;
+    this.previousOldData = undefined;
+    this.parsingAttrValue = undefined;
+  }
 
   // Last value passed to updateProperties.
   this.throttledEmitComponentChanged = utils.throttle(function emitChange () {
@@ -560,13 +574,23 @@ Component.prototype = {
     for (eventName in this.events) {
       this.el.removeEventListener(eventName, this.events[eventName]);
     }
+  },
+
+  /**
+   * Release and free memory.
+   */
+  destroy: function () {
+    this.objectPool.recycle(this.attrValue);
+    this.objectPool.recycle(this.oldData);
+    this.objectPool.recycle(this.parsingAttrValue);
+    this.attrValue = this.oldData = this.parsingAttrValue = undefined;
   }
 };
 
 function eventsBind (component, events) {
   var eventName;
   for (eventName in events) {
-    events[eventName] = events[eventName].bind(component);
+    component.events[eventName] = events[eventName].bind(component);
   }
 }
 
@@ -646,7 +670,6 @@ module.exports.registerComponent = function (name, definition) {
   NewComponent.prototype.system = systems && systems.systems[name];
   NewComponent.prototype.play = wrapPlay(NewComponent.prototype.play);
   NewComponent.prototype.pause = wrapPause(NewComponent.prototype.pause);
-  NewComponent.prototype.remove = wrapRemove(NewComponent.prototype.remove);
 
   schema = utils.extend(processSchema(NewComponent.prototype.schema,
                                       NewComponent.prototype.name));
@@ -767,22 +790,6 @@ function wrapPlay (playMethod) {
     // Add tick behavior.
     if (!hasBehavior(this)) { return; }
     sceneEl.addBehavior(this);
-  };
-}
-
-/**
- * Wrapper for defined remove method.
- * Clean up memory.
- *
- * @param removeMethod {function} - Defined remove method.
- */
-function wrapRemove (removeMethod) {
-  return function remove () {
-    removeMethod.call(this);
-    this.objectPool.recycle(this.attrValue);
-    this.objectPool.recycle(this.oldData);
-    this.objectPool.recycle(this.parsingAttrValue);
-    this.attrValue = this.oldData = this.parsingAttrValue = undefined;
   };
 }
 

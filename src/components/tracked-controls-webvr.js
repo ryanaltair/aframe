@@ -42,7 +42,7 @@ module.exports.Component = registerComponent('tracked-controls-webvr', {
     idPrefix: {type: 'string', default: ''},
     orientationOffset: {type: 'vec3'},
     // Arm model parameters when not 6DoF.
-    armModel: {default: true},
+    armModel: {default: false},
     headElement: {type: 'selector'}
   },
 
@@ -192,7 +192,7 @@ module.exports.Component = registerComponent('tracked-controls-webvr', {
 
     // Apply transforms, if 6DOF and in VR.
     if (vrDisplay && pose.position) {
-      standingMatrix = this.el.sceneEl.renderer.vr.getStandingMatrix();
+      standingMatrix = this.el.sceneEl.renderer.xr.getStandingMatrix();
       object3D.matrix.compose(object3D.position, object3D.quaternion, object3D.scale);
       object3D.matrix.multiplyMatrices(standingMatrix, object3D.matrix);
       object3D.matrix.decompose(object3D.position, object3D.quaternion, object3D.scale);
@@ -261,14 +261,14 @@ module.exports.Component = registerComponent('tracked-controls-webvr', {
     var changedAxes = this.changedAxes;
 
     // Check if axis changed.
-    this.changedAxes.length = 0;
+    this.changedAxes.splice(0, this.changedAxes.length);
     for (i = 0; i < controllerAxes.length; ++i) {
       changedAxes.push(previousAxis[i] !== controllerAxes[i]);
       if (changedAxes[i]) { changed = true; }
     }
     if (!changed) { return false; }
 
-    this.axis.length = 0;
+    this.axis.splice(0, this.axis.length);
     for (i = 0; i < controllerAxes.length; i++) {
       this.axis.push(controllerAxes[i]);
     }

@@ -9,7 +9,7 @@ order: 14
 [ecs]: ./entity-component-system.md
 [github]: http://github.com/aframevr/aframe/
 [three]: http://threejs.org
-[slack]: https://aframevr-slack.herokuapp.com/
+[slack]: https://aframe.io/slack-invite/
 [twitter]: https://twitter.com/aframevr/
 [stackoverflow]: http://stackoverflow.com/questions/tagged/aframe/
 
@@ -56,6 +56,15 @@ common use cases. However, performance is ultimately determined by the
 complexity and characteristics of each individual application. To get the best
 use of resources, we will need deeper understanding about 3D graphics.  See
 [best performance practices and guidelines][bestpractices] to get started.
+
+## Why is my experiencing not entering VR or AR mode?
+
+[release]: https://github.com/aframevr/aframe/releases
+[webxr]: https://immersive-web.github.io/webxr/
+
+If you are using A-Frame 1.0.4 or older you probably need to update to the [latest release][release]. Browsers are migrating to the [WebXR standard][webxr] and old versions might no longer work.
+
+You also have to serve your content over HTTPS. The WebXR API won't be available over HTTP.
 
 ## Why does my asset (e.g., image, video, model) not load?
 
@@ -317,3 +326,9 @@ A-Frame!
 [precision]: ../components/renderer.md#precision
 
 Phones with Adreno 300 series GPUs are notoriously problematic. Set [renderer precision][precision] to `medium` as a workaround. Real fix has to happen at the driver / device level.
+
+## Why is the gyroscope / magic window mode not working?
+
+[New browser policies](https://www.w3.org/TR/orientation-event/#dom-deviceorientationevent-requestpermission) require sites to prompt the user for permission before getting access to DeviceMotionEvents. [Starting with iOS 13](https://webkit.org/blog/9674/new-webkit-features-in-safari-13/) DeviceMotionEvents are only available for pages served over `https`. Other browsers will also apply same policies and restrictions. A-Frame now [incorporates customoziable UI](https://aframe.io/docs/1.0.0/components/device-orientation-permission-ui.html#sidebar) to request the necessary permissions to the user. Make sure to update to [A-Frame latest version](https://github.com/aframevr/aframe/releases)  
+
+

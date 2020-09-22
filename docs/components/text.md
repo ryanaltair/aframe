@@ -4,7 +4,10 @@ type: components
 layout: docs
 parent_section: components
 source_code: src/components/text.js
-examples: []
+examples:
+  - title: Stock Font Showcase
+    src: https://glitch.com/~aframe-text-fonts-demo
+
 ---
 
 The text component renders signed distance field (SDF) font text.
@@ -19,7 +22,7 @@ The text component renders signed distance field (SDF) font text.
 [three-bmfont-text]: https://github.com/Jam3/three-bmfont-text
 
 Note that rendering text in 3D is hard. In 2D web development, text is the most
-basic thing because the browser's renderer and layout engine handles
+basic thing because the browser's renderer and layout engine handle
 everything. In a 3D context, we don't have those luxuries. There are several
 other different ways to render text in A-Frame including:
 
@@ -178,12 +181,12 @@ Lastly, you should specify the character set used in your HTML by using `<meta>`
 <html>
   <head>
     <meta charset="UTF-8">
-    <script src="https://aframe.io/releases/0.9.0/aframe.min.js"></script>
+    <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
   </head>
   <body>
     <a-scene>
       <a-sky color="lightblue"></a-sky>
-      <a-text value="ABCあいうえお日本語" font="custom-msdf.json" negate="false" scale="2 2 1" position="-2 2 -4"></a-text>
+      <a-text value="ABCあいうえお日本語" font="custom-msdf.json" font-image="custom-msdf.png" negate="false" scale="2 2 1" position="-2 2 -4"></a-text>
     </a-scene>
   </body>
 </html>

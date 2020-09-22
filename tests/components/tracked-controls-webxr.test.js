@@ -15,10 +15,14 @@ suite('tracked-controls-webxr', function () {
       el.sceneEl.addEventListener('loaded', function () {
         system = el.sceneEl.systems['tracked-controls-webxr'];
         el.components['tracked-controls'] = {};
-        controller = {handedness: 'left'};
+        controller = {
+          handedness: 'left',
+          profiles: ['test']
+        };
         system.controllers = [controller];
         el.setAttribute('tracked-controls-webxr', {'hand': 'right'});
         component = el.components['tracked-controls-webxr'];
+        component.controller = undefined;
         done();
       });
     });
@@ -27,7 +31,20 @@ suite('tracked-controls-webxr', function () {
   suite('updateGamepad', function () {
     test('matches controller with same hand', function () {
       assert.strictEqual(component.controller, undefined);
-      el.setAttribute('tracked-controls-webxr', {'hand': 'left'});
+      el.setAttribute('tracked-controls-webxr', {id: 'test', hand: 'left'});
+      component.updateController();
+      assert.equal(component.controller, controller);
+    });
+
+    test('matches generic controller', function () {
+      controller = {
+        handedness: 'left',
+        profiles: ['generic-touchpad']
+      };
+      system.controllers = [controller];
+      assert.strictEqual(component.controller, undefined);
+      el.setAttribute('tracked-controls-webxr',
+        {id: 'generic', hand: 'left', iterateControllerProfiles: true});
       component.updateController();
       assert.equal(component.controller, controller);
     });
@@ -36,11 +53,11 @@ suite('tracked-controls-webxr', function () {
   suite('tick', function () {
     test('updates pose and buttons even if mesh is not defined', function () {
       el.sceneEl.frame = {
-        getInputPose: function () {
+        getPose: function () {
           var euler = new THREE.Euler(Math.PI / 2, 0, 0);
           return {
-            targetRay: {
-              transformMatrix: new THREE.Matrix4().compose(
+            transform: {
+              matrix: new THREE.Matrix4().compose(
                 new THREE.Vector3(1, 2, 3),
                 new THREE.Quaternion().setFromEuler(euler),
                 new THREE.Vector3(1, 1, 1)).elements
@@ -48,6 +65,7 @@ suite('tracked-controls-webxr', function () {
           };
         }
       };
+      component.system.referenceSpace = {};
       component.controller = {};
       component.tick();
       assert.shallowDeepEqual(component.el.getAttribute('position'), {x: 1, y: 2, z: 3});

@@ -1,4 +1,188 @@
-## 0.9.0
+### 1.0.4 (Feb 5, 2020)
+
+Bug fixes
+
+### Fixes
+
+* Reset `referenceSpace` and controllers list when entering / exiting VR (#4406) @AG-LucidWeb @Artyom17 @dmarcos
+* Fix WebXR buttons mapping for Oculus Go controller @dmarcos
+* Properly remove `selectstart` / `selectend` event listeners when XR session ends @DougReeder
+* Apply handedness orientation directly to the hands model (#4388) @dbradleyfl @dala00 @dmarcos
+* Set tracked-controls `armModel` default to false (#4405) @dmarcos
+* Set camera entity `matrixAutoupdate` to false only for the WebXR case (#4383) @liewol @dmarcos
+* Check if headset is connected when ignoring `mousedown` events (#4380) @AG-LucidWeb @dmarcos
+* Get rid of invalid character in TRHEE build (#4428) @kennardconsulting @dmarcos
+
+### Enhancements
+
+* Add dithering property in materials component (#4433) @Firepal
+* Add Magic Leap Controller Support @atarng-magicleap
+* New high poly, low poly and toon styles for `hand-controls` @arturitu
+* Listens to WebXR `selectstart` / `selectstart` and reemits as mousedown / mouseup. Simple screen input for AR experiences (fix #4407) @dmarcos
+* Use full hash in dependencies to comply with pnpm @pleku
+* Add color property to `hand-controls` @arturitu
+* Docs improvements @d2s @ChicagoDev @dirkk0 @omgitsraven @dmarcos
+* Add API to set WebXR far and near camera planes (#4387) @DougReeder
+
+
+### 1.0.3 (Dec 30, 2019)
+
+Bug fixes
+
+### Fixes
+
+* Add support for Gear VR controller over WebXR (@Artyom17, @dmarcos)
+* Add support for Oculus Go controller over WebXR (@Artyom17, @arpu, @dmarcos)
+* Fallback to a generic controller when a WebXR gamepad is not recognized (#4376) (@Artyom17, @dmarcos)
+* Match physical and virtual position of Quest and Rift S controllers (fix #4374) (@Artyom17, @dmarcos)
+* Consider initial device orientation for magic window tracking. Fix problem when experience loads in landscape orientation on Android devices (@dmarcos)
+* Listen to DOMContentLoaded if scene is not defined before updating the enter VR UI (#4373) (@mkungla, @dmarcos)
+
+### 1.0.2 (Dec 23, 2019)
+
+Bug fixes
+
+### Fixes
+
+* Track DeviceMotionControls yaw delta instead of absolute value to honor initial camera orientation (fix #4368) (@dmarcos)
+* Disable touchmove / mousemove tracking in VR mode. Pose is preserved when exiting VR (@dmarcos)
+* Hide Device Motion permission dialog on desktop requests from mobile devices. Only the alert about requesting mobile page is shown (fix #4369) (@dmarcos)
+* Reset camera rotation to 0 when entering VR to prevent collision between magic window and WebXR poses (fix #4371) (@karanganesan, @dmarcos)
+* Check if headset is connected before disabling mouse controls (fix #4370) (@KrisMerckx, @dmarcos)
+
+### 1.0.1 (Dec 20, 2019)
+
+Post 1.0.0 release bug fixes.
+
+### Fixes
+
+* Reintroduce a-asset-item logic to assign response type to `glTF` models automatically. It now ignores query parameters that made it fail before. (#4219) (@dmarcos)
+* Prevent zoom on enter `VR / AR buttons` when double tapping on touch screens (@dmarcos)
+* Apply style to reset the enter `AR / VR buttons` background on mouseleave. CSS Hover is sticky on mobile devices (@dmarcos)
+* Fix `magic window mode` in Daydream / ARCore Android devices. Use DeviceOrientationControls for tracking. (#4355) (@mako-lw, @dmarcos)
+* Honor model property in `laser-controls` (#4354) (@dala00, @dmarcos)
+* Reduce `video-sphere / photo-sphere` radius to prevent far plane clipping in VR mode on Android devices (#4365) (@AntoineLucidWeb, @dmarcos)
+
+### Enhancements
+
+* Improve visual design of `modal dialogs` (#4359) (@thedart76, @dmarcos)
+* Reinstate `WebXR` as the default code path for Oculus Browser. Oculus Browser 7.1 now ships the gamepad module (#4360) (@dmarcos)
+* Show `alert dialog` if the site is served over HTTP (#4357) (@brendanciccone, @thedart76, @mkungla, @dmarcos)
+* Improve text of desktop mode in mobile device `dialog`. Change Ok button text to Close (@dmarcos)
+
+## 1.0.0 (Dec 13, 2019)
+
+WebXR final spec support!
+
+[Subscribe to the newsletter](https://aframe.io/subscribe/) for continuing updates.
+
+### Major Changes
+- `WebXR` spec support (@klausw, @Artyom17, @dmarcos)
+- Support `WebXR gamepads` module (#4322) (@dmarcos, @arpu)
+    - HTC Vive (@dmarcos)
+    - Daydream (@arpu)
+    - Oculus Rift (@DigiTec, @dmarcos)
+    - Oculus Rift S (@DigiTec, @dmarcos)
+     - Oculus Go (@arpu)
+     - Oculus Quest (@dmarcos, @Knochi)
+     - Microsoft Mixed Reality (@arpu)
+     - Vive Focus (@IvoJager, @dmarcos)
+- Support  experimental `WebXR AR` mode (#4281) (@klausw)
+- New enter VR and AR icons (#4326) (@klausw, @brendanciccone, @ngokevin, @thedart76 and all members of the community that provided feedback)
+- `Quest` controller support (#4073) (@DigiTec, @dmarcos)
+- Set `72Hz mode` by default on Oculus Browser for Quest (#4232) (@dmarcos)
+- Fallback to WebVR on Oculus Browser until WebXR gamepad module ships (#4342) (@dmarcos)
+- Permission dialog to request access to `DeviceOrientation` events due to iOS 13 new policy (#4303) (@KevinEverywhere, @dmarcos)
+- Update to THREE r111
+
+### Fixes
+- Fix resolution drop on exiting VR mode (#4246) (@tomegz)
+- Don't emit synthetic `vrdisplaypresentchange` event unless there's native WebVR implementation (#4301)  (@dmarcos)
+- Set `xrSession` to undefined after exiting VR mode (#4321) (@klausw, @dmarcos)
+- Emit cursor `mouseup` if `mousedown` if it's only originated on scene (#4249) (@edsilv, @dmarcos)
+- Fix `IE 11` fullscreen mode (#4243) (@AlexandraWins)
+- Bump `animejs` fork to fix flattenArray (#4158) (@ngokevin)
+- Replace undefined check to prevent ReferenceError in `JavaScriptCore` (#4318) (@nuel, @dmarcos)
+- Fix component.events singleton, events being overridden by components of the same type (#4250) (@ngokevin)
+- Honor `embedded mode` on loading screen (#4245) (@dmarcos)
+- Fix incorrect response type inference for glb/gltf files (#4219) (@Ely-S)
+- Fix WebVR deep-linking / navigation (#4199) (@Artyom17)
+- Restore render target to canvas to prevent freezes (@dmarcos)
+- Adjust `three-bmfont-text` to THREE r111 API changes (#4331) (@dmarcos)
+- Don't consider Firefox Reality and Oculus Browser mobile / phone browsers (#4338) (@dmarcos)
+- `DracoLoader` Path set for THREE v108 (#4272) (@arpu)
+- Use glTF header to determine a-asset-item response type (#4228) (@Ely-S)
+- Remove `setTimeout` call in tick if not raycaster.showLine (#4192) (@ngokevin)
+- isMobileVR differentiates Samsung Internet for Gear VR from Samsung Internet for Android (#4188) (@DougReeder)
+- Apply handedness to Oculus Go controller (#4162) (@dmarcos)
+- Fix button mapping for Vive Focus (fix #4344) (@dmarcos, @IvoJager)
+### Deprecations
+- Deprecate `checkHasPositionalTracking` (#4255) (@dirkk0)
+
+## 0.9.2 (May 6, 2019)
+
+Follow-up fix to 0.9.1 for fixing `vrdisplayactivate` and link traversal flow.
+
+### Fixes
+
+- Move `vrdisplayactivate` handler back earlier to fix auto entering VR in many cases (#4155).
+- Fix `vrdisplayactivate` and link traversal due to last build having outdated version our three.js fork.
+- Fix `Entity.destroy` not catching if entity is not attached to scenegraph (#4140).
+- Fix exiting fullscreen on Chrome m71+ (#4136).
+- Fix URL bar not hiding in iOS Safari in fullscreen (#4146).
+- Fix wrong sized canvas in iOS VR by preventing multiple `requestPresent` calls if already presenting (#4148).
+
+## 0.9.1 (April 17, 2019)
+
+Follow-up fixes and improvements to 0.9.0.
+
+Released Hot Module Replacement loader for A-Frame: https://github.com/supermedium/aframe-super-hot-loader
+
+### Major Changes
+
+- Detaching entity from scene will preserve component data. Add
+  `Entity.destroy()` method to clear components and return their memory to the
+  pool (#4121).
+- Use controller index to determine left / right controllers which may impact
+  cases like Vive Trackers. Will look to make this more robust soon (#4013).
+
+### Deprecations
+
+- Deprecate `utils.device.isOculusGo` in favor of `utils.device.isMobileVR` (#4032).
+
+### Fixes
+
+- Updated documentation guides for 0.9.0.
+- Fix text antialiasing from distance (#4039).
+- Improve `vrdisplayactivate` path for more robust navigation (#4093, 3c2f68e).
+- Clean up object requested from pool by component to prevent pollution of old keys from other schemas (#4016).
+- Fix initial camera position, rotation, scale potentially not getting applied (#4020).
+- Fix `utils.coordinates.stringify` for zeroed vectors (#4017).
+- Handle if both WebVR and both WebXR APIs are available (#4022).
+- Handle null device from WebXR (#4030).
+- Catch `navigator.xr.requestDevice` error (#4035).
+- Fix animation for custom vec3 properties (#4051).
+- Fix sound `onEnded` not setting `isPlaying` to false (#4061, #4097, #4101).
+- Fix new materials not getting applied to `obj-model` recursively (#4062).
+- Fix boolean values in `.flushToDOM` (#4069).
+- Hide navigation buttons on Android (#4090).
+- Fix Chrome gamepads by checking `getGamepads` on every tick for Chrome (#4116).
+
+### Enhancements
+
+- Add `Component.events` API to define event handlers that are automatically attached and detached depending on entity lifecycle (#4114).
+- Improve animation error message when passing invalid `animation.property` (#4122).
+- Have `Entity.remove` detach entity to match HTML element behavior (#4082).
+- Migrate `hand-controls` model to glTF (#3932).
+- Add `shadow.enabled` property to shadow system (#4040).
+- Add `renderer.alpha` property to renderer system (#4040).
+- Add `AFRAME.coreComponents` for a list of the core components (#4064).
+
+### Performance
+
+- Use a fork of anime.js that has memory improvements from Kevin (#4028).
+
+## 0.9.0 (February 7, 2019)
 
 Performance improvements, WebXR support, Inspector updates!
 
